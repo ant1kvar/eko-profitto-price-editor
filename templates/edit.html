@@ -1,12 +1,229 @@
 <!DOCTYPE html>
 <html>
-<head><title>Редактор цен</title></head>
+<head>
+    <meta charset="utf-8">
+    <title>Редактор цен</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #1d1f20, #3a3f44);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .mobile-edit {
+            display: block;
+        }
+        
+#cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.period-card {
+    background: #2f3135;
+    border-radius: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+    flex: 1 1 300px; /* растягивается, но не меньше 300px */
+    max-width: 100%;
+    min-width: 250px;
+}
+
+@media (max-width: 600px) {
+    #cards-container {
+        flex-direction: column;
+    }
+
+    .period-card {
+        width: 100%;
+        min-width: unset;
+        flex: none;
+    }
+}
+
+        .period-card {
+            background: #2f3135;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .period-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+
+        .price-row span {
+            color: #bbb;
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .price-row div[contenteditable="true"] {
+            background: #1e1f21;
+            padding: 6px 12px;
+            border-radius: 6px;
+            min-width: 80px;
+            text-align: right;
+            color: #eee;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: #00b894;
+            color: white;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        button:hover {
+            background-color: #00a383;
+        }
+
+        #saving, #saved-message {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        #saving {
+            color: #00cec9;
+            display: none;
+        }
+
+        #saved-message {
+            color: #55efc4;
+            display: none;
+        }
+
+        .logout {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .logout a {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        .logout a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
 <body>
-    <h2>Редактирование таблицы</h2>
-    <form method="post">
-        <textarea name="html" style="width:100%; height:300px;">{{.HTML}}</textarea><br>
-        <button type="submit">Сохранить</button>
-    </form>
+
+<h2>Редактирование цен</h2>
+
+<form method="post" onsubmit="return beforeSubmit()">
+    <!-- Исходная таблица с сервера (парсится в JS) -->
+    <div id="table-container" style="display:none;">
+        {{.HTML | safeHTML}}
+    </div>
+
+    <!-- Карточки -->
+    <div class="mobile-edit" id="cards-container">
+        <!-- JS вставит карточки сюда -->
+    </div>
+
+    <input type="hidden" name="html" id="html">
+    <button type="submit" id="submit-btn">💾 Сохранить</button>
+    <div id="saving">Сохраняется...</div>
+    <div id="saved-message">✅ Успешно сохранено</div>
+</form>
+
+<div class="logout">
     <a href="/logout">Выйти</a>
+</div>
+
+<script>
+    function beforeSubmit() {
+        const htmlInput = document.getElementById("html");
+        const cards = document.querySelectorAll(".period-card");
+        let table = `<table class="table table-bordered" id="PriceTable">\n<tr><td>Период</td>`;
+
+        let headers = [];
+        if (cards.length > 0) {
+            headers = Array.from(cards[0].querySelectorAll(".price-row span")).map(el => el.innerText);
+            for (let h of headers) table += `<td>${h}</td>`;
+            table += `</tr>\n`;
+        }
+
+        cards.forEach(card => {
+            const period = card.querySelector(".period-header").innerText;
+            const values = Array.from(card.querySelectorAll(".price-row div")).map(el => el.innerText.replace(/ ₽/, ''));
+            table += `<tr class="price-tr"><td>${period}</td>`;
+            for (let val of values) table += `<td>${val}</td>`;
+            table += `</tr>\n`;
+        });
+
+        table += `</table>`;
+        htmlInput.value = table;
+
+        const btn = document.getElementById("submit-btn");
+        btn.disabled = true;
+        btn.innerText = "Сохраняется...";
+        document.getElementById("saving").style.display = "block";
+        return true;
+    }
+
+    window.onload = function () {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("success") === "1") {
+            document.getElementById("saved-message").style.display = "block";
+            setTimeout(() => {
+                document.getElementById("saved-message").style.display = "none";
+                history.replaceState({}, "", "/");
+            }, 3000);
+        }
+
+        // Рендер карточек из скрытой таблицы
+        const table = document.querySelector("#table-container table");
+        if (!table) return;
+
+        const rows = table.querySelectorAll("tr");
+        const headers = Array.from(rows[0].querySelectorAll("td")).slice(1).map(td => td.innerText);
+        const cardsContainer = document.getElementById("cards-container");
+
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].querySelectorAll("td");
+            const period = cells[0].innerText;
+            const values = Array.from(cells).slice(1).map(td => td.innerText);
+
+            let card = `<div class="period-card"><div class="period-header">${period}</div>`;
+            for (let j = 0; j < headers.length; j++) {
+                card += `<div class="price-row"><span>${headers[j]}</span><div contenteditable="true">${values[j]}</div></div>`;
+            }
+            card += `</div>`;
+            cardsContainer.innerHTML += card;
+        }
+    };
+</script>
+
 </body>
 </html>
+

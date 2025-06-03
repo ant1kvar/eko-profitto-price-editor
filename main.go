@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,17 +12,18 @@ import (
 )
 
 var (
-	username string
-	password string
-	sessions = make(map[string]bool)
+	username  string
+	password  string
+	sessions  = make(map[string]bool)
+	tmplFuncs = template.FuncMap{
+		"safeHTML": func(s string) template.HTML { return template.HTML(s) },
+	}
 )
 
 func main() {
 	_ = godotenv.Load()
-	username = os.Getenv("USER")
+	username = os.Getenv("USER_NAME")
 	password = os.Getenv("PASSWORD")
-	fmt.Println("USER:", username)
-	fmt.Println("PASSWORD:", password)
 
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logout", logoutHandler)
@@ -96,9 +97,74 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func editHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/edit.html"))
-	data := map[string]string{
-		"HTML": `<table><tr><td>Здесь будет таблица с FTP</td></tr></table>`,
+	tmpl := template.Must(
+		template.New("edit.html").Funcs(tmplFuncs).ParseFiles("templates/edit.html"),
+	)
+
+	if r.Method == http.MethodPost {
+		newTable := r.FormValue("html")
+
+		// Загружаем оригинальный HTML с FTP
+		fullHTML, err := LoadHTMLFromFTP()
+		if err != nil {
+			http.Error(w, "Ошибка загрузки: "+err.Error(), 500)
+			return
+		}
+
+		// Заменяем только <table id="PriceTable">...</table> в HTML
+		start := strings.Index(fullHTML, `<table class="table table-bordered" id="PriceTable"`)
+		if start == -1 {
+			http.Error(w, "Таблица не найдена", 500)
+			return
+		}
+		end := strings.Index(fullHTML[start:], "</table>")
+		if end == -1 {
+			http.Error(w, "Ошибка: </table> не найден", 500)
+			return
+		}
+		end += start + len("</table>")
+		modifiedHTML := fullHTML[:start] + newTable + fullHTML[end:]
+
+		// Извлекаем и обновляем обе таблицы (desktop + mobile)
+		periods, headers, data := ExtractTableData(modifiedHTML)
+		finalHTML := UpdateTable(modifiedHTML, periods, headers, data)
+
+		// Сохраняем обратно на FTP
+		err = SaveHTMLToFTP(finalHTML)
+		if err != nil {
+			http.Error(w, "Ошибка сохранения: "+err.Error(), 500)
+			return
+		}
+
+		// Лог
+		user := username
+		ip := r.RemoteAddr
+		now := time.Now().Format("2006-01-02 15:04:05")
+		println("[СОХРАНЕНО] " + now + " — user: '" + user + "' — ip: " + ip)
+
+		http.Redirect(w, r, "/?success=1", http.StatusSeeOther)
+		return
 	}
+
+	// GET-запрос — отображаем редактор
+	fullHTML, err := LoadHTMLFromFTP()
+	if err != nil {
+		http.Error(w, "Ошибка загрузки: "+err.Error(), 500)
+		return
+	}
+	start := strings.Index(fullHTML, `<table class="table table-bordered" id="PriceTable"`)
+	if start == -1 {
+		http.Error(w, "Таблица не найдена", 500)
+		return
+	}
+	end := strings.Index(fullHTML[start:], "</table>")
+	if end == -1 {
+		http.Error(w, "Ошибка: </table> не найден", 500)
+		return
+	}
+	end += start + len("</table>")
+	table := fullHTML[start:end]
+
+	data := map[string]interface{}{"HTML": table}
 	tmpl.Execute(w, data)
 }

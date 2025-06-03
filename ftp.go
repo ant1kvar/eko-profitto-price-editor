@@ -2,11 +2,12 @@ package main
 
 import (
 	"bytes"
-	"github.com/jlaffaye/ftp"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/jlaffaye/ftp"
 )
 
 func LoadHTMLFromFTP() (string, error) {
@@ -21,14 +22,14 @@ func LoadHTMLFromFTP() (string, error) {
 		return "", err
 	}
 
-	resp, err := c.Retr(os.Getenv("FTP_PATH"))
+	r, err := c.Retr(os.Getenv("FTP_PATH"))
 	if err != nil {
 		return "", err
 	}
-	defer resp.Close()
+	defer r.Close()
 
 	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, resp)
+	_, err = io.Copy(buf, r)
 	if err != nil {
 		return "", err
 	}
@@ -50,3 +51,4 @@ func SaveHTMLToFTP(content string) error {
 
 	return c.Stor(os.Getenv("FTP_PATH"), strings.NewReader(content))
 }
+

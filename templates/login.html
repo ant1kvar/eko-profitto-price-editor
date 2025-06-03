@@ -1,13 +1,104 @@
 <!DOCTYPE html>
-<html>
-<head><title>Вход</title></head>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в систему</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #1d1f20, #3a3f44);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-container {
+            background: #2a2d2f;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            width: 320px;
+        }
+
+        .login-container h2 {
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        
+        input[type="text"],
+        input[type="password"],
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 8px;
+            box-sizing: border-box; /* ВАЖНО */
+            font-size: 15px;
+        }
+
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #00b894;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #00a383;
+        }
+
+        .error {
+            color: #ff7675;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 13px;
+            text-align: center;
+            color: #aaa;
+        }
+
+        .footer a {
+            color: #aaa;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
 <body>
-    <h2>Авторизация</h2>
-    {{if .}}<p style="color:red">{{.}}</p>{{end}}
+
+<div class="login-container">
+    <h2>Вход в систему</h2>
+
+    {{if .}}<div class="error">{{.}}</div>{{end}}
+
     <form method="post">
-        <input name="username" placeholder="Логин"><br>
-        <input name="password" type="password" placeholder="Пароль"><br>
+        <input name="username" type="text" placeholder="Логин" required>
+        <input name="password" type="password" placeholder="Пароль" required>
         <button type="submit">Войти</button>
     </form>
+
+    <div class="footer">
+        powered by <a href="https://github.com/ant1kvar" target="_blank">ant1kvar</a>
+    </div>
+</div>
+
 </body>
 </html>

@@ -68,7 +68,7 @@ func UpdateTable(original string, periods []string, headers []string, newData []
 	for i, row := range newData {
 		desktopTable.WriteString(`<tr class="price-tr"><td>` + periods[i] + `</td>`)
 		for _, val := range row {
-			desktopTable.WriteString("<td>" + val + "</td>")
+			desktopTable.WriteString(`<td contenteditable="true">` + val + `</td>`)
 		}
 		desktopTable.WriteString("</tr>")
 	}
@@ -87,7 +87,9 @@ func UpdateTable(original string, periods []string, headers []string, newData []
 			if price == "" {
 				price = "-"
 			}
-			mobile.WriteString(fmt.Sprintf("<tr><td>%s</td><td>%s ₽</td></tr>\n", headers[j], price))
+			mobile.WriteString(
+				fmt.Sprintf("<tr><td>%s</td><td>%s ₽</td></tr>\n", headers[j], price),
+			)
 		}
 		mobile.WriteString("</tbody></table>")
 	}
