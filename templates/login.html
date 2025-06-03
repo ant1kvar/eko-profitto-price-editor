@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Вход</title></head>
+<body>
+    <h2>Авторизация</h2>
+    {{if .}}<p style="color:red">{{.}}</p>{{end}}
+    <form method="post">
+        <input name="username" placeholder="Логин"><br>
+        <input name="password" type="password" placeholder="Пароль"><br>
+        <button type="submit">Войти</button>
+    </form>
+</body>
+</html>
